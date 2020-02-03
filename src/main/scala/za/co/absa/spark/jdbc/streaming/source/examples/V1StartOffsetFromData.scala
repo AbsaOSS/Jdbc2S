@@ -26,6 +26,9 @@ import java.util.concurrent._
 
 private case class Transaction(user: String, value: Double, date: Date)
 
+/**
+  * Uses a date field as the offset tracker and retrieves the start and end offsets from the dataset.
+  */
 object V1StartOffsetFromData {
 
   private lazy val randGen = new Random()

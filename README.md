@@ -16,20 +16,18 @@
 
 Offset type-agnostic JDBC streaming source for Spark with checkpoint support.
 
-Currently only supports Spark DataSourceV1 and built on top of Spark JDBC batch source.
+Currently only supports Spark DataSourceV1.
 
 Will be expanded to support DataSourceV2 in the future.
 
 
 ## Features/Caveats
 
-The remarkable features of this data source are:
-
 ### Offset type-agnostic
 Any data type can be used as offset (date, string, int, double, custom, etc).
 
 **Caveats** - the field must be convertible to a string representation and must also be increasing, since the comparison
-with between two offsets is not done using the ``< or <=`` operators but the ```!=``` one. 
+between two offsets is not done using the ``< or <=`` operators but the ```!=``` one.
 
 The queries however are done using ```>, >=, < and <=```. They are inclusive for the last value. More specifically, 
 it will be inclusive every time the first 'start' argument is empty and exclusive whenever it is not.
@@ -43,33 +41,132 @@ but when the start offset is defined, i.e. [getBatch(Offset,Offset)](https://git
 ```SELECT fields FROM TABLE WHERE offsetField > start_offset AND offsetField <= end_offset```
 
  
-### Relies on Spark JDBC batch source
-This source works by wrapping the RDD from a batch DataFrame inside a streaming DataFrame, thus, whatever strengths or weaknesses present in that source will also be present in this one.
+### Piggybacked on Spark JDBC batch source
+This source works by wrapping the RDD from a batch DataFrame inside a streaming DataFrame thus there is nothing substantially new.
 
 **Caveats** - to simplify the implementation, this source relies on the method ```internalCreateDataFrame``` from [SQLContext](https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/SQLContext.scala#L385).
 That method, however, if package private, thus, this source had to be put in the package ```org.apache.spark.sql.execution.streaming.sources```
 to be able to access that method.
 
+For more details, check [this section](https://github.com/AbsaOSS/Jdbc2S/blob/master/src/main/scala/org/apache/spark/sql/execution/streaming/sources/JDBCStreamingSourceV1.scala#L427).
+
+
 ### Full support for checkpointing
 This source supports checkpointing as any other streaming source.
 
-**Caveats** - Spark requires offsets to have JSON representations, so that they can be stored in the Write-Ahead Log(WAL) in that format.
-When the query is interrupted, the last committed offset is loaded as an instance of [SerializedOffset](https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/execution/streaming/SerializedOffset.scala).
+**Caveats** - Spark requires offsets to have JSON representations, so that they can be stored in the Write-Ahead Log in that format.
+When the query is restarted, the last committed offset is loaded as an instance of [SerializedOffset](https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/execution/streaming/SerializedOffset.scala).
 
 Also, Spark streaming engine assumes that V1 source have the ```getBatch``` method invoked once the checkpointed offset is loaded, 
 as explained in [this comment](https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/execution/streaming/MicroBatchExecution.scala#L302).
 
 This source, however, processes all the data informed by the last offset, thus, if it processed the offsets informed at query 
-restart time, there would be duplicates. Also, it uses its own offset definition, ```JDBCSingleFieldOffset```.
+restart time, there would be duplicates. Also, it uses its own offset definition, [JDBCSingleFieldOffset](https://github.com/AbsaOSS/Jdbc2S/blob/master/src/main/scala/za/co/absa/spark/jdbc/streaming/source/offsets/JDBCSingleFieldOffset.scala).
 
 So, the way to connect all these pieces is to proceed like this: if the end offset provided to [getBatch](https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/execution/streaming/Source.scala#L61)
-is of type ```SerializedOffset``` and there is no previous offset store, the incoming offset is understood as coming
+is of type ```SerializedOffset``` and there is no previous offset memoized, the incoming offset is understood as coming
 from the checkpoint location. In this case, it is set as the previous offset and an empty DataFrame is returned.
 
-In the next iteration, when calling the same method, the start offset will be the [[SerializedOffset]] instance one, 
+In the next iteration, when calling the same method, the start offset will be the ```SerializedOffset``` instance previously used,
 but it will have been processed already in the last batch, so in this case, the algorithm proceeds normally.
 
+For more information, check [this documentation](https://github.com/AbsaOSS/Jdbc2S/blob/master/src/main/scala/org/apache/spark/sql/execution/streaming/sources/JDBCStreamingSourceV1.scala#L285)
 
 ## Usage
 
+To use this source, the configurations below can be used.
+
+### Parameters
+There is two parameters for the V1 source, one mandatory and another optional.
+
+1. **Mandatory**: ```offset.field```
+
+This parameters specifies the name of the field to be used as the offset.
+
+```scala
+// assuming this is the case class used in the dataset
+case class Transaction(user: String, value: Double, date: Date)
+
+val jdbcOptions = {
+    Map(
+      "user" -> "a_user",
+      "password" -> "a_password",
+      "database" -> "h2_db",
+      "driver" -> "org.h2.Driver",
+      "url" -> "jdbc:h2:mem:myDb;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false",
+      "dbtable" -> "transactions"
+    )
+}
+
+val stream = spark.readStream
+    .format(format)
+    .options(jdbcOptions + ("offset.field" -> "date")) // use the field 'date' as the offset field
+    .load
+```
+
+
+2. **Optional**: ```start.offset```
+
+This parameter defines the start offset to be used when running the query. If not specified, it will be calculated from
+the data.
+
+```scala
+// assuming this is the case class used in the dataset
+case class Transaction(user: String, value: Double, date: Date)
+
+val jdbcOptions = {
+    Map(
+      "user" -> "a_user",
+      "password" -> "a_password",
+      "database" -> "h2_db",
+      "driver" -> "org.h2.Driver",
+      "url" -> "jdbc:h2:mem:myDb;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false",
+      "dbtable" -> "transactions"
+    )
+}
+
+val stream = spark.readStream
+    .format(format)
+    // runs the query starting from the 10th of January until the last date there is data available
+    .options(jdbcOptions + ("offset.field" -> "date") + ("offset.start" -> "2020-01-10"))
+    .load
+```
+
+### Source name
+You can refer to this source either, as a fully qualified provider name or by its short name.
+
+#### Fully qualified provider name
+The fully qualified for the V1 source is **za.co.absa.spark.jdbc.streaming.source.providers.JDBCStreamingSourceProviderV1**.
+
+To use it, you can do:
+
+```scala
+    val format = "za.co.absa.spark.jdbc.streaming.source.providers.JDBCStreamingSourceProviderV1"
+
+    val stream = spark.readStream
+      .format(format)
+      .options(params)
+      .load
+```
+
+#### Short name
+The short name for the V1 source is **jdbc-streaming-v1** as in [here](https://github.com/AbsaOSS/Jdbc2S/blob/master/src/main/scala/za/co/absa/spark/jdbc/streaming/source/providers/JDBCStreamingSourceProviderV1.scala#L47)
+
+To use it you'll need:
+
+1. Create the directory **META-INF/services** under ```src/main/resources```.
+2. Add a file named **org.apache.spark.sql.sources.DataSourceRegister**.
+3. Inside that file, add **za.co.absa.spark.jdbc.streaming.source.providers.JDBCStreamingSourceProviderV1**.
+
+After doing that, you'll be able to do:
+
+```scala
+    val stream = spark.readStream
+      .format("jdbc-streaming-v1")
+      .options(params)
+      .load
+```
+
+
+#### Examples
 Examples can be found in the package ```za.co.absa.spark.jdbc.streaming.source.examples```.

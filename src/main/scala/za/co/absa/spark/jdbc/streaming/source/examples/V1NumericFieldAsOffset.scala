@@ -24,6 +24,9 @@ import java.util.concurrent.atomic.AtomicLong
 
 private case class Signal(eventNumber: Long, user: String, value: Double)
 
+/**
+  * Uses a long field as the offset tracker.
+  */
 object V1NumericFieldAsOffset {
 
   private val eventNumberGenerator = new AtomicLong(0)
