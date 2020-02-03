@@ -20,6 +20,17 @@ Currently only supports Spark DataSourceV1.
 
 Will be expanded to support DataSourceV2 in the future.
 
+## Motivation
+
+Streaming data from RDBMS is not very usual, and when it happens, it is usually through [Change Data Capture(CDC)](https://en.wikipedia.org/wiki/Change_data_capture).
+
+However, in some case (e.g. legacy systems), situations happen that require RDBMS to be uses as the source of some data
+streaming pipeline, e.g. data ingested from mainframes into databases in an hourly fashion.
+
+Spark is a popular streaming processing engine but it only supports RDBMS sources in batch mode, through a JDBC data source.
+
+This project brings the same capabilities available on Spark JDBC batch DataFrames to the streaming world.
+
 
 ## Features/Caveats
 
