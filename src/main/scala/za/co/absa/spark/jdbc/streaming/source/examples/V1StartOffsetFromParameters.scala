@@ -25,6 +25,9 @@ import org.apache.spark.sql.{SaveMode, SparkSession}
 
 private case class Ride(user: String, value: Double, date: Date)
 
+/**
+  * Uses a date field as the offset tracker and gets the start offset from the list of parameters.
+  */
 object V1StartOffsetFromParameters {
 
   private lazy val randGen = new Random()
