@@ -22,7 +22,7 @@ limitations under the License.
 
     <groupId>za.co.absa</groupId>
     <artifactId>jdbc2s_2.11</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.1-SNAPSHOT</version>
     <name>jdbc2s</name>
     <description>JDBC streaming source for Spark</description>
     <url>https://github.com/AbsaOSS/Jdbc2S</url>
@@ -74,7 +74,7 @@ limitations under the License.
         <connection>scm:git:git://github.com:AbsaOSS/Jdbc2S.git</connection>
         <developerConnection>scm:git:ssh://github.com:AbsaOSS/Jdbc2S.git</developerConnection>
         <url>https://github.com/AbsaOSS/Jdbc2S/tree/master</url>
-        <tag>jdbc2s_2.11-1.0.0</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <licenses>

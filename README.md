@@ -14,11 +14,15 @@
 
 # Jdbc2S - JDBC Streaming Source for Spark
 
-Offset type-agnostic JDBC streaming source for Spark with checkpoint support.
+Support for multiple data types(e.g. dates, ints, doubles, etc) as offset trackers.
 
 Currently only supports Spark DataSourceV1.
 
 Will be expanded to support DataSourceV2 in the future.
+
+### Coordinates for Maven POM dependency
+#### Jdbc2S for Scala 2.11
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/za.co.absa/jdbc2s_2.11/badge.svg)](https://search.maven.org/artifact/za.co.absa/jdbc2s_2.11/1.0.0/jar)
 
 ## Motivation
 
@@ -34,8 +38,8 @@ This project brings the same capabilities available on Spark JDBC batch DataFram
 
 ## Features
 
-### Offset type-agnostic
-Offset type-agnostic means that any data type can be used as an offset (date, string, int, double, custom, etc).
+### Support for multiple data types as offset trackers
+Support for multiple data types as offset trackers means that any data type can be used as an offset (date, string, int, double, custom, etc).
 
 #### Caveats
 The field must be convertible to a string representation and must also be increasing, since the comparison
