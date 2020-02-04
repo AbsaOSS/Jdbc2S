@@ -20,9 +20,23 @@ limitations under the License.
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>za.co.absa.spark</groupId>
-    <artifactId>jdbc-streaming-source_2.11</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <groupId>za.co.absa</groupId>
+    <artifactId>jdbc2s_2.11</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <name>jdbc2s</name>
+    <description>JDBC streaming source for Spark</description>
+    <url>https://github.com/AbsaOSS/Jdbc2S</url>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -35,6 +49,7 @@ limitations under the License.
         <gpg.plugin.version>1.6</gpg.plugin.version>
         <surefire.version>3.0.0-M1</surefire.version>
         <nexus.staging.plugin.version>1.6.8</nexus.staging.plugin.version>
+        <maven.release.plugin.version>2.5.3</maven.release.plugin.version>
 
         <!--Tests-->
         <mockito.version>1.8.5</mockito.version>
@@ -54,6 +69,35 @@ limitations under the License.
         <!--Play-->
         <play.json.version>2.7.4</play.json.version>
     </properties>
+
+    <scm>
+        <connection>scm:git:git://github.com:AbsaOSS/Jdbc2S.git</connection>
+        <developerConnection>scm:git:ssh://github.com:AbsaOSS/Jdbc2S.git</developerConnection>
+        <url>https://github.com/AbsaOSS/Jdbc2S/tree/master</url>
+        <tag>jdbc2s_2.11-1.0.0</tag>
+    </scm>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <organization>
+        <name>ABSA Group Limited</name>
+        <url>https://www.absa.africa</url>
+    </organization>
+
+    <developers>
+        <developer>
+            <id>felipemmelo</id>
+            <name>Felipe Melo</name>
+            <timezone>Europe/Prague</timezone>
+            <url>https://github.com/felipemmelo</url>
+        </developer>
+    </developers>
 
     <dependencies>
         <!-- Spark -->
@@ -116,17 +160,14 @@ limitations under the License.
 
         <plugins>
             <plugin>
-                <artifactId>maven-deploy-plugin</artifactId>
-                <version>${maven.deploy.plugin.version}</version>
-                <executions>
-                    <execution>
-                        <id>default-deploy</id>
-                        <phase>deploy</phase>
-                        <goals>
-                            <goal>deploy</goal>
-                        </goals>
-                    </execution>
-                </executions>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>${maven.release.plugin.version}</version>
+                <configuration>
+                    <tagNameFormat>v@{project.version}</tagNameFormat>
+                    <releaseProfiles>deploy</releaseProfiles>
+                    <username>git</username> <!-- Make sure git-push is not tried with local user -->
+                </configuration>
             </plugin>
 
             <!-- the Maven Scala plugin will compile Scala source files -->
@@ -191,7 +232,70 @@ limitations under the License.
                     </execution>
                 </executions>
             </plugin>
-
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>deploy</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>${maven.sources.version}</version>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>net.alchim31.maven</groupId>
+                        <artifactId>scala-maven-plugin</artifactId>
+                        <version>${scala.maven.plugin.version}</version>
+                        <configuration>
+                            <scalaVersion>${scala.version}</scalaVersion>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>doc-jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>${gpg.plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.sonatype.plugins</groupId>
+                        <artifactId>nexus-staging-maven-plugin</artifactId>
+                        <version>${nexus.staging.plugin.version}</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <serverId>ossrh</serverId>
+                            <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                            <autoReleaseAfterClose>false</autoReleaseAfterClose>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

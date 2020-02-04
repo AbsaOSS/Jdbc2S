@@ -70,7 +70,7 @@ class JDBCStreamingSourceProviderV1 extends StreamSourceProvider with DataSource
   }
 
   /**
-    * Return an instance of [[JDBCStreamingSourceV1]].
+    * Return an instance of [[org.apache.spark.sql.execution.streaming.sources.JDBCStreamingSourceV1]].
     *
     * @param sqlContext SQLContext used to interact with Spark SQL and streaming engine.
     * @param metadataPath String containing the path to batch metadata, if any.
@@ -89,8 +89,8 @@ class JDBCStreamingSourceProviderV1 extends StreamSourceProvider with DataSource
   }
 
   /**
-    * Return an instance of [[JDBCStreamingSourceV1]] which will return DataFrames from
-    * [[JDBCStreamingSourceV1.getBatch()]] with 'isStreaming' set to false.
+    * Return an instance of [[org.apache.spark.sql.execution.streaming.sources.JDBCStreamingSourceV1]] which will return DataFrames from
+    * [[org.apache.spark.sql.execution.streaming.sources.JDBCStreamingSourceV1.getBatch()]] with 'isStreaming' set to false.
     *
     * IMPORTANT: This method is intended to be used in tests only.
     *
