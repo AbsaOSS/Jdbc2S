@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.spark.jdbc.streaming.source.testutils
+package utils
 
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SparkSession

@@ -54,10 +54,10 @@ object V1NumericFieldAsOffset {
   /**
     * Generates some random data of format [[Signal]] from start to end date.
     */
-  private class RandomDataSaver(howMany: Int) extends Runnable {
+  private class RandomDataSaver(numberOfSignals: Int) extends Runnable {
     override def run(): Unit = {
-      println(s"Inserting $howMany signals ...")
-      writeSignals(randomSignals(howMany))
+      println(s"Inserting $numberOfSignals signals ...")
+      writeSignals(randomSignals(numberOfSignals))
       println(s"Done")
     }
   }
@@ -72,10 +72,10 @@ object V1NumericFieldAsOffset {
 
     val scheduler = new ScheduledThreadPoolExecutor(1)
     // inserts a second batch of data after 8 seconds
-    scheduler.schedule(new RandomDataSaver(howMany = 5), 8, TimeUnit.SECONDS)
+    scheduler.schedule(new RandomDataSaver(numberOfSignals = 5), 8, TimeUnit.SECONDS)
 
     // inserts a third batch of data after 12 seconds
-    scheduler.schedule(new RandomDataSaver(howMany = 15), 12, TimeUnit.SECONDS)
+    scheduler.schedule(new RandomDataSaver(numberOfSignals = 15), 12, TimeUnit.SECONDS)
 
     // the offset field will be 'eventNumber', which is long
     readAndShowTransactions(format = format, offsetField = "eventNumber", triggerMs = 4000L, timeoutMs = 30000L)

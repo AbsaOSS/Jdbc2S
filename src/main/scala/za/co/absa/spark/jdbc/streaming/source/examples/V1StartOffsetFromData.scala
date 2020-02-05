@@ -75,7 +75,7 @@ object V1StartOffsetFromData {
     writeTransactions(transactions)
 
     val scheduler = new ScheduledThreadPoolExecutor(1)
-    scheduler.schedule(new RandomDataSaver("2020-01-10", "2020-01-20"), 8, TimeUnit.SECONDS)
+    scheduler.schedule(new RandomDataSaver("2020-01-05", "2020-01-20"), 8, TimeUnit.SECONDS)
     scheduler.schedule(new RandomDataSaver("2020-01-20", "2020-01-30"), 16, TimeUnit.SECONDS)
 
     // the offset field will be 'date', which will be treated as string
@@ -104,10 +104,10 @@ object V1StartOffsetFromData {
 
     val query = stream
       .writeStream
-        .trigger(Trigger.ProcessingTime(triggerMs))
+      .trigger(Trigger.ProcessingTime(triggerMs))
       .format(source = "console")
       .outputMode(OutputMode.Append())
-        .start()
+      .start()
 
     query.awaitTermination(timeoutMs = timeoutMs)
     query.stop()

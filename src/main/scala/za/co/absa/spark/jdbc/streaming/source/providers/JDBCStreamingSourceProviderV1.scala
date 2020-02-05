@@ -36,8 +36,8 @@ class JDBCStreamingSourceProviderV1 extends StreamSourceProvider with DataSource
     sqlContext
       .sparkSession
       .read
-        .format("jdbc")
-        .options(parameters)
+      .format("jdbc")
+      .options(parameters)
       .load
   }
 

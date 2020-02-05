@@ -41,6 +41,8 @@ This project brings the same capabilities available on Spark JDBC batch DataFram
 ### Support for multiple data types as offset trackers
 Support for multiple data types as offset trackers means that any data type can be used as an offset (date, string, int, double, custom, etc).
 
+IMPORTANT: updates and deletions will only be identified if they also advance the offset field.
+
 #### Caveats
 The field must be convertible to a string representation and must also be increasing, since the comparison
 between two offsets is not done using the `<` or `<=` operators but the `!=` one.

@@ -198,20 +198,20 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
 
   /**
     * Finds either start or end offset based on the type.
-    * @param whichFunction either, [[org.apache.spark.sql.execution.streaming.sources.JDBCStreamingSourceV1.OFFSET_START_FUNCTION]] or
+    * @param offsetFunctionName either, [[org.apache.spark.sql.execution.streaming.sources.JDBCStreamingSourceV1.OFFSET_START_FUNCTION]] or
     *              [[org.apache.spark.sql.execution.streaming.sources.JDBCStreamingSourceV1.OFFSET_END_FUNCTION]]
     * @return String representation of the offset value or None if the batch DataFrame is empty.
     */
-  private def findOffset(whichFunction: String): Option[String] = {
+  private def findOffset(offsetFunctionName: String): Option[String] = {
     if (!batchDataFrame.isEmpty) {
-      val offsetRetrievalFunction = whichFunction match {
+      val offsetRetrievalFunction = offsetFunctionName match {
         case OFFSET_START_FUNCTION => min(offsetField)
         case OFFSET_END_FUNCTION => max(offsetField)
-        case _ => throw new IllegalArgumentException(s"Invalid offset discovery function: $whichFunction")
+        case _ => throw new IllegalArgumentException(s"Invalid offset discovery function: $offsetFunctionName")
       }
 
       val offsetValue = getFirstColValAsString(offsetRetrievalFunction)
-      logInfo(msg = s"Inferred from data as '$whichFunction($offsetField)': $offsetValue")
+      logInfo(msg = s"Inferred from data as '$offsetFunctionName($offsetField)': $offsetValue")
       Some(offsetValue)
     } else {
       None
