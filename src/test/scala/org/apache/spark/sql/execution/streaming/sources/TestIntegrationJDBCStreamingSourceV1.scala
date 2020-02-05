@@ -24,10 +24,9 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.execution.streaming.sources.JDBCStreamingSourceV1._
 import org.scalatest.FunSuite
 import utils.SparkJDBCUtils.{jdbcDefaultConnectionParams, writeToJDBC}
-import utils.TestClass
-import za.co.absa.spark.jdbc.streaming.source.testutils.SparkTestBase
-import za.co.absa.spark.jdbc.streaming.source.testutils.SparkTestUtils._
-import org.apache.spark.sql.functions.{min,max}
+import utils.{SparkTestBase, TestClass}
+import utils.SparkTestUtils._
+import org.apache.spark.sql.functions.{max, min}
 
 class TestIntegrationJDBCStreamingSourceV1 extends FunSuite with SparkTestBase {
 

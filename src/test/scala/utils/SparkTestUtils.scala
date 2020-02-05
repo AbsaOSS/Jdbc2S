@@ -13,12 +13,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.spark.jdbc.streaming.source.testutils
+package utils
 
-import org.apache.spark.sql.{DataFrame, Encoders, SparkSession}
 import org.apache.spark.sql.types.StructType
-
-import reflect.runtime.universe.TypeTag
+import org.apache.spark.sql.{DataFrame, Encoders, SparkSession}
+import scala.reflect.runtime.universe.TypeTag
 
 object SparkTestUtils {
 

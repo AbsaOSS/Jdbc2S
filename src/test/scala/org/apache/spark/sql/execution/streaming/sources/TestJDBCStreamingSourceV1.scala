@@ -20,15 +20,14 @@ import java.time.temporal.ChronoUnit
 import java.util.{Random, UUID}
 
 import org.scalatest.{BeforeAndAfterAll, FunSpec}
-import za.co.absa.spark.jdbc.streaming.source.testutils.SparkTestBase
 import JDBCStreamingSourceV1._
 import org.apache.spark.sql.execution.streaming.{Offset, SerializedOffset}
 import org.apache.spark.sql.functions.{max, min}
 import utils.SparkJDBCUtils._
-import utils.TestClass
+import utils.{SparkTestBase, TestClass}
 import za.co.absa.spark.jdbc.streaming.source.offsets.{JDBCSingleFieldOffset, OffsetField, OffsetRange}
 import za.co.absa.spark.jdbc.streaming.source.providers.JDBCStreamingSourceProviderV1
-import za.co.absa.spark.jdbc.streaming.source.testutils.SparkTestUtils._
+import utils.SparkTestUtils._
 import utils.SparkSchemaUtils.equalsIgnoreNullability
 import za.co.absa.spark.jdbc.streaming.source.offsets.JsonOffsetMapper
 

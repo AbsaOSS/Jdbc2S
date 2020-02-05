@@ -21,11 +21,10 @@ import java.util.{Random, UUID}
 
 import org.apache.spark.sql.types.{LongType, StringType, StructType}
 import org.scalatest.{BeforeAndAfterAll, FunSpec}
-import za.co.absa.spark.jdbc.streaming.source.testutils.SparkTestBase
-import za.co.absa.spark.jdbc.streaming.source.testutils.SparkTestUtils._
+import utils.SparkTestUtils._
 import org.apache.spark.sql.execution.streaming.sources.JDBCStreamingSourceV1
 import utils.SparkJDBCUtils._
-import utils.TestClass
+import utils.{SparkTestBase, TestClass}
 import utils.SparkSchemaUtils._
 import JDBCStreamingSourceV1._
 
