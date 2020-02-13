@@ -69,7 +69,8 @@ class TestJDBCStreamingSourceProviderV1 extends FunSpec with BeforeAndAfterAll w
   describe(description = "createSource()") {
     it("should return an instance of the correct source if correct provider name") {
       val provider = new JDBCStreamingSourceProviderV1()
-      val params = Map(CONFIG_OFFSET_FIELD -> "d") ++ jdbcOptions
+      val params = Map(CONFIG_OFFSET_FIELD -> "d",
+        CONFIG_OFFSET_FIELD_DATE_FORMAT -> "YYYY-MM-DD") ++ jdbcOptions
       val source = provider.createSource(spark.sqlContext, "/", None, provider.shortName(), params)
 
       assert(source.isInstanceOf[JDBCStreamingSourceV1])
@@ -77,7 +78,7 @@ class TestJDBCStreamingSourceProviderV1 extends FunSpec with BeforeAndAfterAll w
 
     it("should passes parameters, provider name and batch dataframe to source") {
       val expectedMetadata = "/tmp/"
-      val expectedParams = jdbcOptions ++ Map(CONFIG_OFFSET_FIELD -> "d")
+      val expectedParams = jdbcOptions ++ Map(CONFIG_OFFSET_FIELD -> "d", CONFIG_OFFSET_FIELD_DATE_FORMAT -> "YYYY-MM-DD")
       val expectedSchema = getSparkSchema[TestClass]
 
       val provider = new JDBCStreamingSourceProviderV1()
@@ -99,7 +100,7 @@ class TestJDBCStreamingSourceProviderV1 extends FunSpec with BeforeAndAfterAll w
     it("should use DataFrame schema and not the informed one") {
       val ignoredSchema = new StructType().add(name = "f1", LongType).add(name = "f2", StringType)
 
-      val params = Map(CONFIG_OFFSET_FIELD -> "d") ++ jdbcOptions
+      val params = Map(CONFIG_OFFSET_FIELD -> "d", CONFIG_OFFSET_FIELD_DATE_FORMAT -> "YYYY-MM-DD") ++ jdbcOptions
 
       val provider = new JDBCStreamingSourceProviderV1()
       val source = provider.createSource(spark.sqlContext, metadataPath = "/tmp", Some(ignoredSchema),
@@ -113,7 +114,7 @@ class TestJDBCStreamingSourceProviderV1 extends FunSpec with BeforeAndAfterAll w
     it("should create sources with enabled streaming by default") {
       val ignoredSchema = new StructType().add(name = "f1", LongType).add(name = "f2", StringType)
 
-      val params = Map(CONFIG_OFFSET_FIELD -> "d") ++ jdbcOptions
+      val params = Map(CONFIG_OFFSET_FIELD -> "d", CONFIG_OFFSET_FIELD_DATE_FORMAT -> "YYYY-MM-DD") ++ jdbcOptions
 
       val provider = new JDBCStreamingSourceProviderV1()
       val source = provider.createSource(spark.sqlContext, metadataPath = "/tmp", Some(ignoredSchema),
@@ -126,7 +127,7 @@ class TestJDBCStreamingSourceProviderV1 extends FunSpec with BeforeAndAfterAll w
     it("should create sources with disabled streaming if told to") {
       val ignoredSchema = new StructType().add(name = "f1", LongType).add(name = "f2", StringType)
 
-      val params = Map(CONFIG_OFFSET_FIELD -> "d") ++ jdbcOptions
+      val params = Map(CONFIG_OFFSET_FIELD -> "d", CONFIG_OFFSET_FIELD_DATE_FORMAT -> "YYYY-MM-DD") ++ jdbcOptions
 
       val provider = new JDBCStreamingSourceProviderV1()
       val source = provider.createSourceWithDisabledStreaming(spark.sqlContext, metadataPath = "/tmp",

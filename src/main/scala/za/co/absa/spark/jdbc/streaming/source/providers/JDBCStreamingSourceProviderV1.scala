@@ -36,9 +36,14 @@ class JDBCStreamingSourceProviderV1 extends StreamSourceProvider with DataSource
     sqlContext
       .sparkSession
       .read
-      .format("jdbc")
+      .format(source = "jdbc")
       .options(parameters)
       .load
+  }
+
+  private lazy val sourceSchema = (sqlContext: SQLContext, parameters: Map[String, String]) => {
+    batchJDBCDataFrame(sqlContext, parameters)
+      .schema
   }
 
   /**
@@ -66,7 +71,7 @@ class JDBCStreamingSourceProviderV1 extends StreamSourceProvider with DataSource
                             parameters: Map[String, String]): (String, StructType) = {
 
     validateProviderName(providerName)
-    (shortName(), batchJDBCDataFrame(sqlContext, parameters).schema)
+    (shortName(), sourceSchema(sqlContext, parameters))
   }
 
   /**
@@ -123,7 +128,7 @@ class JDBCStreamingSourceProviderV1 extends StreamSourceProvider with DataSource
     val caseInsensitiveParameters = CaseInsensitiveMap(parameters)
 
     new JDBCStreamingSourceV1(sqlContext, providerName, caseInsensitiveParameters, metadataPath,
-      batchJDBCDataFrame(sqlContext, parameters), streamingEnabled)
+      sourceSchema(sqlContext, parameters), streamingEnabled)
   }
 
   private def validateProviderName(name: String): Unit = {
