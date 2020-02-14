@@ -13,24 +13,9 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.execution.streaming.sources
+package org.apache.spark.sql.execution.streaming.sources.query
 
-import org.apache.spark.sql.execution.streaming.sources.OffsetQueryMaker.OffsetTypes.OffsetType
-import org.apache.spark.sql.types.{DataType, DateType, StructField, StructType}
-
-private[sources] object OffsetQueryMaker {
-
-  // currently data types can only be dates, strings and numbers
-  object SupportedTypes extends Enumeration {
-    type SupportedType = Value
-    val DATE, STRING, NUMBER = Value
-  }
-
-  object OffsetTypes extends Enumeration {
-    type OffsetType = Value
-    val START, END = Value
-  }
-}
+import org.apache.spark.sql.execution.streaming.sources.types.OffsetSupportedTypes._
 
 /**
   * Creates queries to retrieve the end offset.
@@ -40,43 +25,18 @@ private[sources] object OffsetQueryMaker {
   * For instance, dates should be converted by invoking 'to_date' from Spark SQL functions where numbers don't need
   * any special treatment.
   *
-  * @param table String containing the name of the table to be queried.
+  * @param table     String containing the name of the table to be queried.
   * @param fieldName String containing the name of the offset field to be queried.
-  * @param schema [[StructType]] to inform the type of the field.
-  * @param format Option[String] containing the expected format in case the offset field is of date type.
+  * @param dataType  [[OffsetDataType]] containing the type of the offset field.
+  * @param format    Option[String] containing the expected format in case the offset field is of date type.
   */
-private[sources] class OffsetQueryMaker(table: String, fieldName: String, schema: StructType,
+private[sources] class OffsetQueryMaker(table: String, fieldName: String, dataType: OffsetDataType,
                                         format: Option[String]) {
 
-  import OffsetQueryMaker.SupportedTypes._
-  import org.apache.spark.sql.execution.streaming.sources.OffsetQueryMaker.OffsetTypes._
-
-  private val dataType = {
-    val sqlField = schema
-      .fields
-      .find(_.name.toLowerCase == fieldName.toLowerCase)
-
-    sqlField match {
-      case Some(field) => getSupportedType(field)
-      case _ => throw new IllegalArgumentException(s"Field not found in schema: '$fieldName'")
-    }
-  }
+  import org.apache.spark.sql.execution.streaming.sources.types.OffsetTypes._
 
   if (dataType == DATE && format.isEmpty) {
-    throw new IllegalArgumentException(s"Data type is DATE for no format was specified.")
-  }
-
-  /**
-    * Converts the Spark SQL data type to one of the [[SupportedType]] options.
-    *
-    * This piggies-back on the inference available at [[org.apache.spark.sql.execution.datasources.jdbc.JdbcRelationProvider.createRelation()]]
-    */
-  private def getSupportedType(field: StructField): SupportedType = {
-    field.dataType match {
-      case _: DateType => DATE
-      case t: DataType if t.typeName.toLowerCase.contains("string") => STRING
-      case _ => NUMBER
-    }
+    throw new IllegalArgumentException(s"Data type is $DATE for no format was specified.")
   }
 
   /**
@@ -84,8 +44,8 @@ private[sources] class OffsetQueryMaker(table: String, fieldName: String, schema
     */
   private def getOffsetOperationClause(offsetType: OffsetType): String = {
     offsetType match {
-      case START => s"MIN($fieldName) AS START_OFFSET"
-      case END => s"MAX($fieldName) AS END_OFFSET"
+      case START_OFFSET => s"MIN($fieldName) AS START_OFFSET"
+      case END_OFFSET => s"MAX($fieldName) AS END_OFFSET"
     }
   }
 
@@ -94,8 +54,8 @@ private[sources] class OffsetQueryMaker(table: String, fieldName: String, schema
     */
   private def getFilterClause(filterValue: String, offsetType: OffsetType): String = {
     val operation = offsetType match {
-      case START => "<="
-      case END => ">="
+      case START_OFFSET => "<="
+      case END_OFFSET => ">="
     }
 
     dataType match {
@@ -109,12 +69,12 @@ private[sources] class OffsetQueryMaker(table: String, fieldName: String, schema
   /**
     * Creates queries to retrieve the end offset.
     *
-    * @param operationType [[org.apache.spark.sql.execution.streaming.sources.OffsetQueryMaker.OffsetTypes.OffsetType]] specifying which type of operation should be executed.
+    * @param offsetType    [[org.apache.spark.sql.execution.streaming.sources.types.OffsetTypes.OffsetType]] specifying which type of operation should be executed.
     * @param fromInclusive Optional starting offset, to nail down the query.
     * @return String containing the query to be executed to find the end offset.
     * @throws IllegalArgumentException if the field is of date type but no format is provided.
     */
-  def create(offsetType: OffsetType, fromInclusive: Option[String]): String = {
+  def make(offsetType: OffsetType, fromInclusive: Option[String]): String = {
 
     val query = new StringBuilder(s"SELECT ")
     query.append(getOffsetOperationClause(offsetType))

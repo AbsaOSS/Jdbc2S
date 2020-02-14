@@ -22,11 +22,12 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
 import org.apache.spark.sql.execution.streaming.{Offset, SerializedOffset, Source}
 import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.{Column, DataFrame, SQLContext}
+import org.apache.spark.sql.{DataFrame, SQLContext}
 import za.co.absa.spark.jdbc.streaming.source.offsets.{JDBCSingleFieldOffset, OffsetField, OffsetRange}
-import org.apache.spark.sql.functions.max
+import org.apache.spark.sql.execution.streaming.sources.types.OffsetSupportedTypes._
+import org.apache.spark.sql.execution.streaming.sources.query.OffsetQueryMaker
 import za.co.absa.spark.jdbc.streaming.source.offsets.JsonOffsetMapper
-import OffsetQueryMaker.OffsetTypes.{START, END}
+import org.apache.spark.sql.execution.streaming.sources.types.OffsetTypes._
 
 /**
   * Container class for a local range describing a batch start and end offsets.
@@ -64,7 +65,7 @@ object JDBCStreamingSourceV1 {
   *                    IMPORTANT: The offset field MUST have its intended representation when .toString() is invoked on its type.
   *
   * @param metadataPath directory where metadata can be stored. Same as used by Spark to save offsets, batch ids, etc.
-  * @param batchDataFrame batch DataFrame to be queried at the beginning of each batch
+  * @param sourceSchema [[StructType]] containing the schema expected by Catalyst.
   * @param streamingEnabled used to instruct this source to toJDBCOffset the batch data into a stream data DataFrame or not.
   *                         It is true by default and intended to be used in tests only, so that data and offsets can
   *                         be tested without invoking a whole Spark streaming pipeline.
@@ -97,7 +98,7 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
   // stores the last returned offset
   private var currentOffset: Option[JDBCSingleFieldOffset] = None
 
-  private val offsetQueryMaker = new OffsetQueryMaker(tableName, offsetField, schema,
+  private val offsetQueryMaker = new OffsetQueryMaker(tableName, offsetField, findSupportedType(offsetField, schema),
     parameters.get(CONFIG_OFFSET_FIELD_DATE_FORMAT))
 
   /**
@@ -250,8 +251,8 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
     */
   private def findOffset(offsetFunctionName: String, filter: Option[String]): Option[String] = {
     val offsetRetrievalQuery = offsetFunctionName match {
-      case OFFSET_START_FUNCTION => offsetQueryMaker.create(START, filter)
-      case OFFSET_END_FUNCTION => offsetQueryMaker.create(END, filter)
+      case OFFSET_START_FUNCTION => offsetQueryMaker.make(START_OFFSET, filter)
+      case OFFSET_END_FUNCTION => offsetQueryMaker.make(END_OFFSET, filter)
       case _ => throw new IllegalArgumentException(s"Invalid offset discovery function: $offsetFunctionName")
     }
 

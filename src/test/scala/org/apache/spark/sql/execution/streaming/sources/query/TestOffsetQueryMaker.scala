@@ -13,29 +13,22 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.execution.streaming.sources
+package org.apache.spark.sql.execution.streaming.sources.query
 
-import org.scalatest.{FunSpec, FunSuite}
-import utils.SparkSchemaUtils._
-import utils.TestClass
-import OffsetQueryMaker.OffsetTypes._
+import org.apache.spark.sql.execution.streaming.sources.types.OffsetSupportedTypes.{DATE, NUMBER, STRING}
+import org.scalatest.FunSpec
+import org.apache.spark.sql.execution.streaming.sources.types.OffsetTypes._
 
 class TestOffsetQueryMaker extends FunSpec {
 
-  private val schema = getSparkSchema[TestClass]
   private val tableName = "transactions"
 
   describe(description = "constructor") {
-    it("should throw if field is not contained in the schema") {
-      val fieldName = "inexistent"
-
-      assertThrows[IllegalArgumentException](new OffsetQueryMaker(tableName, fieldName, schema, None))
-    }
 
     it("should throw if field is DATE type but no format is provided") {
       val fieldName = "d"
 
-      assertThrows[IllegalArgumentException](new OffsetQueryMaker(tableName, fieldName, schema, None))
+      assertThrows[IllegalArgumentException](new OffsetQueryMaker(tableName, fieldName, DATE, None))
     }
   }
 
@@ -46,7 +39,7 @@ class TestOffsetQueryMaker extends FunSpec {
 
       val expected = s"SELECT MAX($fieldName) AS END_OFFSET FROM $tableName WHERE $fieldName >= '$from'"
 
-      val actual = new OffsetQueryMaker(tableName, fieldName, schema, None).create(END, Some(from))
+      val actual = new OffsetQueryMaker(tableName, fieldName, STRING, None).make(END_OFFSET, Some(from))
 
       assert(actual == expected)
     }
@@ -57,7 +50,7 @@ class TestOffsetQueryMaker extends FunSpec {
 
       val expected = s"SELECT MAX($fieldName) AS END_OFFSET FROM $tableName WHERE $fieldName >= $from"
 
-      val actual = new OffsetQueryMaker(tableName, fieldName, schema, None).create(END, Some(from))
+      val actual = new OffsetQueryMaker(tableName, fieldName, NUMBER, None).make(END_OFFSET, Some(from))
 
       assert(actual == expected)
     }
@@ -69,7 +62,7 @@ class TestOffsetQueryMaker extends FunSpec {
 
       val expected = s"SELECT MAX($fieldName) AS END_OFFSET FROM $tableName WHERE $fieldName >= to_date('$from', '$format')"
 
-      val actual = new OffsetQueryMaker(tableName, fieldName, schema, Some(format)).create(END, Some(from))
+      val actual = new OffsetQueryMaker(tableName, fieldName, DATE, Some(format)).make(END_OFFSET, Some(from))
 
       assert(expected == actual)
     }
@@ -79,7 +72,7 @@ class TestOffsetQueryMaker extends FunSpec {
 
       val expected = s"SELECT MAX($fieldName) AS END_OFFSET FROM $tableName"
 
-      val actual = new OffsetQueryMaker(tableName, fieldName, schema, None).create(END, fromInclusive = None)
+      val actual = new OffsetQueryMaker(tableName, fieldName, STRING, None).make(END_OFFSET, fromInclusive = None)
 
       assert(actual == expected)
     }
@@ -89,7 +82,7 @@ class TestOffsetQueryMaker extends FunSpec {
 
       val expected = s"SELECT MAX($fieldName) AS END_OFFSET FROM $tableName"
 
-      val actual = new OffsetQueryMaker(tableName, fieldName, schema, None).create(END, fromInclusive = None)
+      val actual = new OffsetQueryMaker(tableName, fieldName, NUMBER, None).make(END_OFFSET, fromInclusive = None)
 
       assert(actual == expected)
     }
@@ -100,7 +93,7 @@ class TestOffsetQueryMaker extends FunSpec {
 
       val expected = s"SELECT MAX($fieldName) AS END_OFFSET FROM $tableName"
 
-      val actual = new OffsetQueryMaker(tableName, fieldName, schema, Some(format)).create(END, fromInclusive = None)
+      val actual = new OffsetQueryMaker(tableName, fieldName, DATE, Some(format)).make(END_OFFSET, fromInclusive = None)
 
       assert(actual == expected)
     }
@@ -113,7 +106,7 @@ class TestOffsetQueryMaker extends FunSpec {
 
       val expected = s"SELECT MIN($fieldName) AS START_OFFSET FROM $tableName WHERE $fieldName <= '$from'"
 
-      val actual = new OffsetQueryMaker(tableName, fieldName, schema, None).create(START, Some(from))
+      val actual = new OffsetQueryMaker(tableName, fieldName, STRING, None).make(START_OFFSET, Some(from))
 
       assert(actual == expected)
     }
@@ -124,7 +117,7 @@ class TestOffsetQueryMaker extends FunSpec {
 
       val expected = s"SELECT MIN($fieldName) AS START_OFFSET FROM $tableName WHERE $fieldName <= $from"
 
-      val actual = new OffsetQueryMaker(tableName, fieldName, schema, None).create(START, Some(from))
+      val actual = new OffsetQueryMaker(tableName, fieldName, NUMBER, None).make(START_OFFSET, Some(from))
 
       assert(actual == expected)
     }
@@ -136,7 +129,7 @@ class TestOffsetQueryMaker extends FunSpec {
 
       val expected = s"SELECT MIN($fieldName) AS START_OFFSET FROM $tableName WHERE $fieldName <= to_date('$from', '$format')"
 
-      val actual = new OffsetQueryMaker(tableName, fieldName, schema, Some(format)).create(START, Some(from))
+      val actual = new OffsetQueryMaker(tableName, fieldName, DATE, Some(format)).make(START_OFFSET, Some(from))
 
       assert(expected == actual)
     }
@@ -146,7 +139,7 @@ class TestOffsetQueryMaker extends FunSpec {
 
       val expected = s"SELECT MIN($fieldName) AS START_OFFSET FROM $tableName"
 
-      val actual = new OffsetQueryMaker(tableName, fieldName, schema, None).create(START, fromInclusive = None)
+      val actual = new OffsetQueryMaker(tableName, fieldName, STRING, None).make(START_OFFSET, fromInclusive = None)
 
       assert(actual == expected)
     }
@@ -156,7 +149,7 @@ class TestOffsetQueryMaker extends FunSpec {
 
       val expected = s"SELECT MIN($fieldName) AS START_OFFSET FROM $tableName"
 
-      val actual = new OffsetQueryMaker(tableName, fieldName, schema, None).create(START, fromInclusive = None)
+      val actual = new OffsetQueryMaker(tableName, fieldName, NUMBER, None).make(START_OFFSET, fromInclusive = None)
 
       assert(actual == expected)
     }
@@ -167,7 +160,7 @@ class TestOffsetQueryMaker extends FunSpec {
 
       val expected = s"SELECT MIN($fieldName) AS START_OFFSET FROM $tableName"
 
-      val actual = new OffsetQueryMaker(tableName, fieldName, schema, Some(format)).create(START, fromInclusive = None)
+      val actual = new OffsetQueryMaker(tableName, fieldName, DATE, Some(format)).make(START_OFFSET, fromInclusive = None)
 
       assert(actual == expected)
     }

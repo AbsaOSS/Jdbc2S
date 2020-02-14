@@ -35,6 +35,8 @@ import za.co.absa.spark.jdbc.streaming.source.offsets.JsonOffsetMapper
 
 class TestJDBCStreamingSourceV1 extends FunSpec with BeforeAndAfterAll with SparkTestBase {
 
+  private val fullStreamingFormat = "za.co.absa.spark.jdbc.streaming.source.providers.JDBCStreamingSourceProviderV1"
+
   import spark.implicits._
 
   private val randGen = new Random()
@@ -348,13 +350,7 @@ class TestJDBCStreamingSourceV1 extends FunSpec with BeforeAndAfterAll with Spar
 
       writeRandomTestData(expectedStartOffset, expectedEndOffset, params)
 
-      val provider = new JDBCStreamingSourceProviderV1()
-      val source = provider.createSourceWithDisabledStreaming(spark.sqlContext, metadataPath="/tmp", None,
-        provider.shortName(), params)
-
-      val endOffset = toOffsetRange(expectedOffsetField, expectedStartOffset, expectedEndOffset)
-
-      val batch = source.getBatch(None, endOffset)
+      val batch = readStreamIntoMemoryTable(spark, fullStreamingFormat, tableName, params)
 
       val actualEndOffset = batch.select(max(expectedOffsetField)).first().get(0).toString
 
@@ -371,12 +367,7 @@ class TestJDBCStreamingSourceV1 extends FunSpec with BeforeAndAfterAll with Spar
       val expectedEndOffset = "2020-02-05"
       writeRandomTestData(expectedStartOffset, expectedEndOffset, params)
 
-      val provider = new JDBCStreamingSourceProviderV1()
-      val source = provider.createSourceWithDisabledStreaming(spark.sqlContext, metadataPath="/tmp", None, provider.shortName(), params)
-
-      val endOffset = toOffsetRange(expectedOffsetField, expectedStartOffset, expectedEndOffset)
-
-      val batch = source.getBatch(None, endOffset)
+      val batch = readStreamIntoMemoryTable(spark, fullStreamingFormat, tableName, params)
 
       val actualStartOffset = batch.select(min(expectedOffsetField)).first().get(0).toString
 
@@ -457,7 +448,7 @@ class TestJDBCStreamingSourceV1 extends FunSpec with BeforeAndAfterAll with Spar
       })
     }
 
-    it("should retrieve all the fields if none is specified") {
+    it("should retrieve all the fields") {
       val tableName = randomTableName
       val expectedOffsetField = "d"
       val params = Map(CONFIG_OFFSET_FIELD -> expectedOffsetField,
@@ -467,13 +458,9 @@ class TestJDBCStreamingSourceV1 extends FunSpec with BeforeAndAfterAll with Spar
       val expectedEndOffset = "2020-01-05"
       writeRandomTestData(expectedStartOffset, expectedEndOffset, params)
 
-      val provider = new JDBCStreamingSourceProviderV1()
-      val source = provider.createSourceWithDisabledStreaming(spark.sqlContext, metadataPath="/tmp", None,
-        provider.shortName(), params)
+      val batch = readStreamIntoMemoryTable(spark, fullStreamingFormat, tableName, params)
 
-      val endOffset = toOffsetRange(expectedOffsetField, expectedStartOffset, expectedEndOffset)
-
-      val actualSchema = source.getBatch(None, endOffset).schema
+      val actualSchema = batch.schema
 
       val expectedSchema = getSparkSchema[TestClass]()
 
@@ -573,7 +560,6 @@ class TestJDBCStreamingSourceV1 extends FunSpec with BeforeAndAfterAll with Spar
       val offsetField = "d"
       val startOffset = "2020-01-01"
       val endOffset = "2020-01-05"
-      val data = randomTestData(startOffset, endOffset)
 
       val params = Map(CONFIG_OFFSET_FIELD -> offsetField,
         CONFIG_START_OFFSET -> startOffset,
@@ -600,7 +586,6 @@ class TestJDBCStreamingSourceV1 extends FunSpec with BeforeAndAfterAll with Spar
       val offsetField = "d"
       val lastStartOffset = "2020-01-01"
       val lastEndOffset = "2020-01-05"
-      val endOffset = "2020-01-10"
 
       val params = Map(CONFIG_OFFSET_FIELD -> offsetField,
         CONFIG_OFFSET_FIELD_DATE_FORMAT -> "YYYY-MM-DD") ++ jdbcDefaultConnectionParams(randomTableName)
@@ -627,7 +612,6 @@ class TestJDBCStreamingSourceV1 extends FunSpec with BeforeAndAfterAll with Spar
       // since the last end will be ignored as it is expected to have been processed in the last batch
       val expectedStartOffset = "2020-01-06"
       val endOffset = "2020-01-10"
-      val data = randomTestData(lastStartOffset, endOffset)
 
       val params = Map(CONFIG_OFFSET_FIELD -> offsetField,
         CONFIG_OFFSET_FIELD_DATE_FORMAT -> "YYYY-MM-DD") ++ jdbcDefaultConnectionParams(randomTableName)
