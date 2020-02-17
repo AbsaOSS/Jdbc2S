@@ -71,8 +71,8 @@ limitations under the License.
     </properties>
 
     <scm>
-        <connection>scm:git:git://github.com:AbsaOSS/Jdbc2S.git</connection>
-        <developerConnection>scm:git:ssh://github.com:AbsaOSS/Jdbc2S.git</developerConnection>
+        <connection>scm:git:git://github.com/AbsaOSS/Jdbc2S.git</connection>
+        <developerConnection>scm:git:ssh://github.com/AbsaOSS/Jdbc2S.git</developerConnection>
         <url>https://github.com/AbsaOSS/Jdbc2S/tree/master</url>
         <tag>HEAD</tag>
     </scm>
