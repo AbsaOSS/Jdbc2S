@@ -103,7 +103,7 @@ To use this source, the configurations below can be used.
 ### Parameters
 There are two parameters for the V1 source, one mandatory and another optional.
 
-1. **Mandatory**: `offset.field`
+1. **Mandatory**: `offset.field` and `offset.field.date.format` IF `offset.field` is of DATE type.
 
 This parameters specifies the name of the field to be used as the offset.
 
@@ -133,6 +133,8 @@ val stream = spark.readStream
 
 This parameter defines the start offset to be used when running the query. If not specified, it will be calculated from
 the data.
+
+IMPORTANT: if the field being used as offset is not indexed, specifying the initial offset may significantly increase performance.
 
 ```scala
 // assuming this is the case class used in the dataset
