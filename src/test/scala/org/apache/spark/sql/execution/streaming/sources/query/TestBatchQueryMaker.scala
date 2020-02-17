@@ -16,57 +16,110 @@
 package org.apache.spark.sql.execution.streaming.sources.query
 
 import org.scalatest.FunSuite
-import org.apache.spark.sql.execution.streaming.sources.types.OffsetTypes._
 import org.apache.spark.sql.execution.streaming.sources.types.OffsetSupportedTypes._
-import BatchQueryMaker.OffsetOperationType._
+import BatchQueryMaker.OffsetInclusionType._
 
 class TestBatchQueryMaker extends FunSuite {
 
-  test(testName = s"$START_OFFSET of type $NUMBER with $INCLUSIVE comparison") {
+  private val tableName = "transactions"
+  private val offsetField = "offset_field_name"
 
+  private def assertQuery(expected: String, start: String, end: String, dataType: OffsetDataType,
+                          inclusionType: InclusionType, format: Option[String]): Unit = {
+    val maker = new BatchQueryMaker(tableName, offsetField, dataType, format)
+    val actual = maker.make(start, end, inclusionType)
+
+    assert(actual == expected)
   }
 
-  test(testName = s"$START_OFFSET of type $STRING with $INCLUSIVE comparison") {
+  private def getExpected(start: String, end: String, format: Option[String], dataType: OffsetDataType,
+                          inclusionType: InclusionType): String = {
 
+    val operation = getInclusionOperator(inclusionType)
+    val baseQuery = s"SELECT * FROM $tableName WHERE "
+
+    val condition = dataType match {
+      case NUMBER => s"$offsetField $operation $start AND $offsetField <= $end"
+      case STRING => s"$offsetField $operation '$start' AND $offsetField <= '$end'"
+      case DATE => s"$offsetField $operation to_date('$start','${format.get}') AND " +
+        s"$offsetField <= to_date('$end','${format.get}')"
+    }
+
+    baseQuery + condition
   }
 
-  test(testName = s"$START_OFFSET of type $DATE with $INCLUSIVE comparison") {
-
+  private def getInclusionOperator(inclusionType: InclusionType): String = {
+    inclusionType match {
+      case INCLUSIVE => ">="
+      case EXCLUSIVE => ">"
+    }
   }
 
-  test(testName = s"$START_OFFSET of type $NUMBER with $EXCLUSIVE comparison") {
+  test(testName = s"type $NUMBER with $INCLUSIVE comparison") {
+    val startOffset = "1"
+    val endOffset = "10"
 
+    val inclusionType = INCLUSIVE
+    val offsetFieldType = NUMBER
+
+    val expected = getExpected(startOffset, endOffset, None, offsetFieldType, inclusionType)
+    assertQuery(expected, startOffset, endOffset, offsetFieldType, inclusionType, None)
   }
 
-  test(testName = s"$START_OFFSET of type $STRING with $EXCLUSIVE comparison") {
+  test(testName = s"type $STRING with $INCLUSIVE comparison") {
+    val startOffset = "1"
+    val endOffset = "10"
 
+    val inclusionType = INCLUSIVE
+    val offsetFieldType = STRING
+
+    val expected = getExpected(startOffset, endOffset, None, offsetFieldType, inclusionType)
+    assertQuery(expected, startOffset, endOffset, offsetFieldType, inclusionType, None)
   }
 
-  test(testName = s"$START_OFFSET of type $DATE with $EXCLUSIVE comparison") {
+  test(testName = s"type $DATE with $INCLUSIVE comparison") {
+    val startOffset = "2020-01-02"
+    val endOffset = "2020-01-10"
+    val format = Some("YYYY-MM-DD")
 
+    val inclusionType = INCLUSIVE
+    val offsetFieldType = DATE
+
+    val expected = getExpected(startOffset, endOffset, format, offsetFieldType, inclusionType)
+    assertQuery(expected, startOffset, endOffset, offsetFieldType, inclusionType, format)
   }
 
-  test(testName = s"$END_OFFSET of type $NUMBER with $INCLUSIVE comparison") {
+  test(testName = s"type $NUMBER with $EXCLUSIVE comparison") {
+    val startOffset = "1"
+    val endOffset = "10"
 
+    val inclusionType = EXCLUSIVE
+    val offsetFieldType = NUMBER
+
+    val expected = getExpected(startOffset, endOffset, None, offsetFieldType, inclusionType)
+    assertQuery(expected, startOffset, endOffset, offsetFieldType, inclusionType, None)
   }
 
-  test(testName = s"$END_OFFSET of type $STRING with $INCLUSIVE comparison") {
+  test(testName = s"type $STRING with $EXCLUSIVE comparison") {
+    val startOffset = "1"
+    val endOffset = "10"
 
+    val inclusionType = EXCLUSIVE
+    val offsetFieldType = STRING
+
+    val expected = getExpected(startOffset, endOffset, None, offsetFieldType, inclusionType)
+    assertQuery(expected, startOffset, endOffset, offsetFieldType, inclusionType, None)
   }
 
-  test(testName = s"$END_OFFSET of type $DATE with $INCLUSIVE comparison") {
+  test(testName = s"type $DATE with $EXCLUSIVE comparison") {
+    val startOffset = "2020-01-02"
+    val endOffset = "2020-01-10"
+    val format = Some("YYYY-MM-DD")
 
-  }
+    val inclusionType = EXCLUSIVE
+    val offsetFieldType = DATE
 
-  test(testName = s"$END_OFFSET of type $NUMBER with $EXCLUSIVE comparison") {
-
-  }
-
-  test(testName = s"$END_OFFSET of type $STRING with $EXCLUSIVE comparison") {
-
-  }
-
-  test(testName = s"$END_OFFSET of type $DATE with $EXCLUSIVE comparison") {
-
+    val expected = getExpected(startOffset, endOffset, format, offsetFieldType, inclusionType)
+    assertQuery(expected, startOffset, endOffset, offsetFieldType, inclusionType, format)
   }
 }

@@ -20,31 +20,28 @@ import java.util.Properties
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
+import org.apache.spark.sql.execution.streaming.sources.query.BatchQueryMaker.OffsetInclusionType.InclusionType
 import org.apache.spark.sql.execution.streaming.{Offset, SerializedOffset, Source}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, SQLContext}
 import za.co.absa.spark.jdbc.streaming.source.offsets.{JDBCSingleFieldOffset, OffsetField, OffsetRange}
 import org.apache.spark.sql.execution.streaming.sources.types.OffsetSupportedTypes._
-import org.apache.spark.sql.execution.streaming.sources.query.OffsetQueryMaker
+import org.apache.spark.sql.execution.streaming.sources.query.{BatchQueryMaker, OffsetQueryMaker}
 import za.co.absa.spark.jdbc.streaming.source.offsets.JsonOffsetMapper
 import org.apache.spark.sql.execution.streaming.sources.types.OffsetTypes._
+import org.apache.spark.sql.execution.streaming.sources.query.BatchQueryMaker.OffsetInclusionType._
 
 /**
   * Container class for a local range describing a batch start and end offsets.
-  * @param start
-  * @param end
-  * @param exclusiveStart indicates if the start offset should be compared using '>' (exclusive = true)
+  * @param startInclusion [[InclusionType]] telling if the start offset should be compared using '>' (exclusive = true)
   *                       or '>=' (exclusive = false)
   */
-private case class BatchRange(start: String, end: String, exclusiveStart: Boolean)
+private case class BatchRange(start: String, end: String, startInclusion: InclusionType)
 
 object JDBCStreamingSourceV1 {
   val CONFIG_OFFSET_FIELD = "offset.field"
   val CONFIG_START_OFFSET = "start.offset"
   val CONFIG_OFFSET_FIELD_DATE_FORMAT = "offset.field.date.format"
-
-  private val OFFSET_START_FUNCTION = "min"
-  private val OFFSET_END_FUNCTION = "max"
 }
 
 /**
@@ -98,8 +95,11 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
   // stores the last returned offset
   private var currentOffset: Option[JDBCSingleFieldOffset] = None
 
-  private val offsetQueryMaker = new OffsetQueryMaker(tableName, offsetField, findSupportedType(offsetField, schema),
-    parameters.get(CONFIG_OFFSET_FIELD_DATE_FORMAT))
+  private val offsetQueryMaker: OffsetQueryMaker = new OffsetQueryMaker(tableName, offsetField,
+    findSupportedType(offsetField, schema), parameters.get(CONFIG_OFFSET_FIELD_DATE_FORMAT))
+
+  private val batchQueryMaker = new BatchQueryMaker(tableName, offsetField,
+    findSupportedType(offsetField,  schema), parameters.get(CONFIG_OFFSET_FIELD_DATE_FORMAT))
 
   /**
     * Retrieves the schema that will be used during the query execution.
@@ -176,7 +176,7 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
     val startOffset = parameters.get(CONFIG_START_OFFSET)
 
     // try to find an end offset maybe from a starting point
-    currentOffset = findOffset(OFFSET_END_FUNCTION, startOffset) match {
+    currentOffset = findOffset(END_OFFSET, startOffset) match {
         // no end offset was found, so there is nothing to do
       case None =>
         logInfo(msg = s"Not offsets found for field '$offsetField'")
@@ -187,7 +187,7 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
         val startOffset = parameters.get(CONFIG_START_OFFSET) match {
           case Some(offset) => Some(offset)
             // otherwise, let's find it from the found last offset (not a big effect in passing it here, though)
-          case None => findOffset(OFFSET_START_FUNCTION, Some(endOffset))
+          case None => findOffset(START_OFFSET, Some(endOffset))
         }
 
         // sanity check
@@ -206,7 +206,7 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
     * Finds a new end offset if it exists
     */
   private def nextEndOffset(): Option[String] = {
-    findOffset(OFFSET_END_FUNCTION, previousEndOffsetValue)
+    findOffset(END_OFFSET, previousEndOffsetValue)
   }
 
   /**
@@ -241,23 +241,18 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
   }
 
   /**
-    * Finds either start or end offset based on the type.
-    * @param offsetFunctionName either, [[org.apache.spark.sql.execution.streaming.sources.JDBCStreamingSourceV1.OFFSET_START_FUNCTION]] or
-    *              [[org.apache.spark.sql.execution.streaming.sources.JDBCStreamingSourceV1.OFFSET_END_FUNCTION]]
-    * @param filter optional offset to be used as a cutting point. MAY BE USEFUL to avoid full table scans for
-    *               fields that are not indexed.
+    * Finds an offset, start or end.
     *
-    * @return String representation of the offset value or None if the batch DataFrame is empty.
+    * @param offsetType [[OffsetType]] reference.
+    * @param filter Option[String] with optional filters to be used.
+    *
+    * @return Option[String] containing the found offset or empty.
     */
-  private def findOffset(offsetFunctionName: String, filter: Option[String]): Option[String] = {
-    val offsetRetrievalQuery = offsetFunctionName match {
-      case OFFSET_START_FUNCTION => offsetQueryMaker.make(START_OFFSET, filter)
-      case OFFSET_END_FUNCTION => offsetQueryMaker.make(END_OFFSET, filter)
-      case _ => throw new IllegalArgumentException(s"Invalid offset discovery function: $offsetFunctionName")
-    }
+  private def findOffset(offsetType: OffsetType, filter: Option[String]): Option[String] = {
+    val offsetRetrievalQuery = offsetQueryMaker.make(offsetType, filter)
 
     val offsetValue = getFirstColValAsString(offsetRetrievalQuery)
-    logInfo(msg = s"Inferred from data as '$offsetFunctionName($offsetField)': $offsetValue")
+    logInfo(msg = s"Inferred from data as '$offsetType': $offsetValue")
     offsetValue
   }
 
@@ -280,32 +275,6 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
     } else {
       None
     }
-
-/*    val firstRow = batchDataFrame
-      .select(sortedColumn)
-      .first()
-
-    if (!firstRow.isNullAt(0)) {
-      Some(firstRow.get(0).toString)
-    } else {
-      None
-    }*/
-
-/*    println("OTHER WAY")
-    val quersy = s"SELECT MAX(INFORMATION_DATE) AS INFORMATION_DATE FROM $tableName WHERE INFORMATION_DATE > to_date('2020-02-09','YYYY-MM-DD')"
-    //val query = s"SELECT COUNT(*) AS INFORMATION_DATE FROM $tableName WHERE INFORMATION_DATE = to_date('2020-02-09','YYYY-MM-DD')"
-    //1063824
-    print(query)
-    val value = sqlContext
-      .read
-      .jdbc(url=connectionProperties.getProperty("url"), table=s"($query)", connectionProperties)
-        .first()
-        .get(0)
-        .toString
-
-    //val value = "2020-02-09"
-    println(s"GOT: $value")
-    Some(value)*/
   }
 
   /**
@@ -425,16 +394,14 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
     */
   private def resolveBatchRange(start: Option[Offset], end: Offset): BatchRange = {
     if (start.isEmpty) {
-      val exclusiveStart = false
       // if no start offset, the end offset range defines the whole range
 
       // this is not an exclusive start since the provided start offset is empty, thus
       // this is probably the first time the query is executed
-      toBatchRange(end, exclusiveStart)
+      toBatchRange(end, INCLUSIVE)
     } else {
-      val exclusiveStart = true
-      val previousBatchRange = toBatchRange(start.get, exclusiveStart)
-      val nextBatchRange = toBatchRange(end, exclusiveStart)
+      val previousBatchRange = toBatchRange(start.get, INCLUSIVE)
+      val nextBatchRange = toBatchRange(end, INCLUSIVE)
 
       // if the start offset was received, it means it belonged to the previous batch,
       // thus its end offset defines the start offset of the next batch
@@ -444,7 +411,7 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
 
       // exclusive start is true since the start offset is the end of the previous one, which is expected
       // to have already been processed
-      BatchRange(previousBatchRange.end, nextBatchRange.end, exclusiveStart)
+      BatchRange(previousBatchRange.end, nextBatchRange.end, EXCLUSIVE)
     }
   }
 
@@ -452,10 +419,10 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
     * Converts an [[Offset]] implementation to [[BatchRange]].
     * Required because it may be [[JDBCSingleFieldOffset]], [[SerializedOffset]] or something else.
     */
-  private def toBatchRange(offset: Offset, exclusiveStart: Boolean): BatchRange = {
+  private def toBatchRange(offset: Offset, startInclusionType: InclusionType): BatchRange = {
     offset match {
-      case o: JDBCSingleFieldOffset => toBatchRange(o, exclusiveStart)
-      case o: SerializedOffset => toBatchRange(toJDBCOffset(o), exclusiveStart)
+      case o: JDBCSingleFieldOffset => toBatchRange(o, startInclusionType)
+      case o: SerializedOffset => toBatchRange(toJDBCOffset(o), startInclusionType)
       case o => throw new IllegalArgumentException(s"Unknown offset type: '${o.getClass.getCanonicalName}'")
     }
   }
@@ -464,12 +431,12 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
     * Converts an instance of [[JDBCSingleFieldOffset]] to [[BatchRange]].
     * Throws if the range is invalid, i.e. one of the fields is not defined.
     */
-  private def toBatchRange(offset: JDBCSingleFieldOffset, exclusiveStart: Boolean): BatchRange = {
+  private def toBatchRange(offset: JDBCSingleFieldOffset, startInclusionType: InclusionType): BatchRange = {
     val range = offset.fieldsOffsets.range
 
     throwIfInvalidRange(range)
 
-    BatchRange(range.start.get, range.end.get, exclusiveStart)
+    BatchRange(range.start.get, range.end.get, startInclusionType)
   }
 
   @throws[IllegalArgumentException]
@@ -490,18 +457,15 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
     * Retrieves a batch of data from the informed offsets.
     */
   private def getBatchData(range: BatchRange): DataFrame = {
-    val startComparator = if (range.exclusiveStart) {
-      ">"
-    } else {
-      ">="
-    }
+
+    val query = batchQueryMaker.make(range.start, range.end, range.startInclusion)
 
     sqlContext
       .read
-      .format("jdbc")
+      .format(source = "jdbc")
       .options(parameters)
+      .option(JDBCOptions.JDBC_TABLE_NAME, s"($query)")
       .load()
-      .where(s"$offsetField $startComparator '${range.start}' AND $offsetField <= '${range.end}'")
   }
 
   /**
