@@ -15,14 +15,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>za.co.absa</groupId>
     <artifactId>jdbc2s_2.11</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.0.1</version>
     <name>jdbc2s</name>
     <description>JDBC streaming source for Spark</description>
     <url>https://github.com/AbsaOSS/Jdbc2S</url>
@@ -74,7 +72,7 @@ limitations under the License.
         <connection>scm:git:git://github.com/AbsaOSS/Jdbc2S.git</connection>
         <developerConnection>scm:git:ssh://github.com/AbsaOSS/Jdbc2S.git</developerConnection>
         <url>https://github.com/AbsaOSS/Jdbc2S/tree/master</url>
-        <tag>HEAD</tag>
+        <tag>v1.0.1</tag>
     </scm>
 
     <licenses>
