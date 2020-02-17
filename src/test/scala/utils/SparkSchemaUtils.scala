@@ -15,9 +15,19 @@
 
 package utils
 
+import org.apache.spark.sql.Encoders
 import org.apache.spark.sql.types.{StructField, StructType}
 
+import scala.reflect.runtime.universe.TypeTag
+
 object SparkSchemaUtils {
+
+  /**
+    * Finds a Spark SQL schema for a given class.
+    */
+  def getSparkSchema[T <: Product]()(implicit tag: TypeTag[T]): StructType = {
+    Encoders.product[T].schema
+  }
 
   /**
     * Checks if two Spark StructTypes are the same regardless of the nullability.

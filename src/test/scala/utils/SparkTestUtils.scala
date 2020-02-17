@@ -15,18 +15,10 @@
 
 package utils
 
-import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.{DataFrame, Encoders, SparkSession}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import scala.reflect.runtime.universe.TypeTag
 
 object SparkTestUtils {
-
-  /**
-    * Finds a Spark SQL schema for a given class.
-    */
-  def getSparkSchema[T <: Product]()(implicit tag: TypeTag[T]): StructType = {
-    Encoders.product[T].schema
-  }
 
   /**
     * Creates an empty DataFrame with the schema provided by a given class.

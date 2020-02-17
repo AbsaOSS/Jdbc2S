@@ -68,7 +68,8 @@ class TestIntegrationJDBCStreamingSourceV1 extends FunSuite with SparkTestBase {
   test(testName = "consume all available data and stop") {
     val tableName = randomTableName
     val offsetField = "d"
-    val params = Map(CONFIG_OFFSET_FIELD -> offsetField) ++ jdbcDefaultConnectionParams(tableName)
+    val params = Map(CONFIG_OFFSET_FIELD -> offsetField,
+      CONFIG_OFFSET_FIELD_DATE_FORMAT -> "YYYY-MM-DD") ++ jdbcDefaultConnectionParams(tableName)
 
     val expected = randomTestData(startDate = "2020-01-01", endDate = "2020-01-05")
     writeToJDBC[TestClass](spark, params, expected)
@@ -87,7 +88,8 @@ class TestIntegrationJDBCStreamingSourceV1 extends FunSuite with SparkTestBase {
     val tableName = randomTableName
     val offsetField = "d"
     val params = Map(CONFIG_OFFSET_FIELD -> offsetField,
-      CONFIG_START_OFFSET -> expectedStartDate) ++ jdbcDefaultConnectionParams(tableName)
+      CONFIG_START_OFFSET -> expectedStartDate,
+      CONFIG_OFFSET_FIELD_DATE_FORMAT -> "YYYY-MM-DD") ++ jdbcDefaultConnectionParams(tableName)
 
     val randomData = randomTestData(startDate = seriesStartDate, endDate = "2020-01-05")
     writeToJDBC[TestClass](spark, params, randomData)
