@@ -124,7 +124,7 @@ val jdbcOptions = {
 
 val stream = spark.readStream
     .format(format)
-    .options(jdbcOptions + ("offset.field" -> "date")) // use the field 'date' as the offset field
+    .options(jdbcOptions + ("offset.field" -> "date") + ("offset.field.date.format" -> "YYYY-MM-DD")) // use the field 'date' as the offset field
     .load
 ```
 
@@ -154,7 +154,7 @@ val jdbcOptions = {
 val stream = spark.readStream
     .format(format)
     // runs the query starting from the 10th of January until the last date there is data available
-    .options(jdbcOptions + ("offset.field" -> "date") + ("offset.start" -> "2020-01-10"))
+    .options(jdbcOptions + ("offset.field" -> "date") + ("offset.start" -> "2020-01-10") + ("offset.field.date.format" -> "YYYY-MM-DD"))
     .load
 ```
 
