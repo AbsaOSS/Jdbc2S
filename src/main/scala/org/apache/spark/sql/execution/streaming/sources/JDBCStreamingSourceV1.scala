@@ -345,9 +345,9 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
 
       updateCurrentOffsetFromCheckpoint(end)
 
-      logInfo(msg = s"Invoked with offset from checkpoint, will search for new offset. Previous offsets were restored to '$currentOffset'")
+      logInfo(msg = s"Invoked with offset from checkpoint:'$currentOffset'")
 
-      logInfo(msg = "")
+      logInfo(msg = s"Looking for offsets greater than '${currentOffset.get.fieldsOffsets.range.end.get}'")
       // this call will update the 'currentOffset' if a new end offset is found, otherwise it will still be the one
       // from the last successful batch
       getOffset match {
