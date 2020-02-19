@@ -332,25 +332,30 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
     */
   override def getBatch(start: Option[Offset], end: Offset): DataFrame = {
 
-    if (isFromCheckpoint(end)) {
-      logInfo(msg = "Invoked with checkpointed offset. Restoring state and returning empty as this offset " +
-        "was processed by the last batch")
+    val batchRange = if (isFromCheckpoint(end)) {
+      logInfo(msg = "Invoked with checkpointed offset. Restoring state and retrieving next end offset")
 
       updateCurrentOffsetFromCheckpoint(end)
 
       logInfo(msg = s"Offsets restored to '$currentOffset'")
 
-      getEmptyDataFrame
+      // this call will update the 'currentOffset' if a new end offset is found, otherwise it will still be the one
+      // from the last successful batch
+      getOffset match {
+        case Some(newEndOffset) => resolveBatchRange(start = Some(end), end = newEndOffset)
+        case None => resolveBatchRange(start = Some(end), end = end) // will result in an empty result
+      }
     }
     else {
-      val batchRange = resolveBatchRange(start, end)
-      val batchData = getBatchData(batchRange)
+      resolveBatchRange(start, end)
+    }
 
-      if (streamingEnabled) {
-        toStreamingDataFrame(batchData)
-      } else {
-        batchData
-      }
+    val batchData = getBatchData(batchRange)
+
+    if (streamingEnabled) {
+      toStreamingDataFrame(batchData)
+    } else {
+      batchData
     }
   }
 
@@ -377,19 +382,6 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
   }
 
   /**
-    * Creates an empty DataFrame with schema as in [[schema]].
-    */
-  private def getEmptyDataFrame: DataFrame = {
-    val emptyRDD = sqlContext.sparkContext.emptyRDD[InternalRow]
-
-    sqlContext.internalCreateDataFrame(
-      emptyRDD,
-      schema,
-      isStreaming = streamingEnabled
-    )
-  }
-
-  /**
     * Resolves the range for the next batch.
     */
   private def resolveBatchRange(start: Option[Offset], end: Offset): BatchRange = {
@@ -400,8 +392,8 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
       // this is probably the first time the query is executed
       toBatchRange(end, INCLUSIVE)
     } else {
-      val previousBatchRange = toBatchRange(start.get, INCLUSIVE)
-      val nextBatchRange = toBatchRange(end, INCLUSIVE)
+      val previousBatchRange = toBatchRange(start.get, EXCLUSIVE)
+      val nextBatchRange = toBatchRange(end, EXCLUSIVE)
 
       // if the start offset was received, it means it belonged to the previous batch,
       // thus its end offset defines the start offset of the next batch

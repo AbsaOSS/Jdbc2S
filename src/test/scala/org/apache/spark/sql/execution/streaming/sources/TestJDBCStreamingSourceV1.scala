@@ -590,6 +590,8 @@ class TestJDBCStreamingSourceV1 extends FunSpec with BeforeAndAfterAll with Spar
       val params = Map(CONFIG_OFFSET_FIELD -> offsetField,
         CONFIG_OFFSET_FIELD_DATE_FORMAT -> "YYYY-MM-DD") ++ jdbcDefaultConnectionParams(randomTableName)
 
+      writeRandomTestData(lastStartOffset, lastEndOffset, params)
+
       val source = new JDBCStreamingSourceV1(spark.sqlContext, providerName="whatever", params,
         metadataPath = "/tmp", getSparkSchema[TestClass], streamingEnabled = false)
 
@@ -604,7 +606,7 @@ class TestJDBCStreamingSourceV1 extends FunSpec with BeforeAndAfterAll with Spar
       assert(equalOffsets(source.getLastOffset.get, checkpointedOffset))
     }
 
-    it(s"should retrieve offsets from ${SerializedOffset.getClass.getCanonicalName} if informed") {
+    it(s"should retrieve next end offset if start came from checkpoint") {
 
       val offsetField = "d"
       val lastStartOffset = "2020-01-01"
@@ -627,19 +629,52 @@ class TestJDBCStreamingSourceV1 extends FunSpec with BeforeAndAfterAll with Spar
       val deserializedOffset = SerializedOffset(JsonOffsetMapper.toJson(checkpointedOffset))
 
       // just to set the current offset as the last one, i.e. the one coming from the checkpoint location
-      source.getBatch(None, deserializedOffset)
-      assert(equalOffsets(source.getLastOffset.get, checkpointedOffset))
+      val batch = source.getBatch(None, deserializedOffset)
 
-      val calculatedOffset = JDBCSingleFieldOffset(OffsetField(offsetField,
-        OffsetRange(Some(lastStartOffset), Some(endOffset))))
+      // offset that should be resolved after invoking 'getBatch' with a checkpointed offset
+      // i.e. the method should identify the offset was checkpointed, use it as the previous offset and try to get a new
+      // one. If found, the new offset range should start from the 'end' of the previous offset until the 'end' of the
+      // newly found one
+      val expectedResolvedOffset = JDBCSingleFieldOffset(OffsetField(offsetField,
+        OffsetRange(Some(lastEndOffset), Some(endOffset))))
 
-      val batch = source.getBatch(Some(deserializedOffset), calculatedOffset)
+      assert(source.getLastOffset.get == expectedResolvedOffset)
 
       val actualStart = batch.select(min(offsetField)).first().get(0).toString
       val actualEnd = batch.select(max(offsetField)).first().get(0).toString
 
       assert(actualStart == expectedStartOffset)
       assert(actualEnd == endOffset)
+    }
+
+    it(s"should return empty if starting from checkpointed offset and no new data is available") {
+
+      val offsetField = "d"
+      val lastStartOffset = "2020-01-01"
+      val lastEndOffset = "2020-01-05"
+
+      val params = Map(CONFIG_OFFSET_FIELD -> offsetField,
+        CONFIG_OFFSET_FIELD_DATE_FORMAT -> "YYYY-MM-DD") ++ jdbcDefaultConnectionParams(randomTableName)
+
+      writeRandomTestData(lastStartOffset, lastEndOffset, params)
+
+      val source = new JDBCStreamingSourceV1(spark.sqlContext, providerName="whatever", params,
+        metadataPath = "/tmp", getSparkSchema[TestClass], streamingEnabled = false)
+
+      // at this point there is data, however, we're assuming the query is being restarted from offset, so, the data
+      // should only by identified after invoking '.getOffset'
+      val checkpointedOffset = toOffsetRange(offsetField, lastStartOffset, lastEndOffset)
+      val deserializedOffset = SerializedOffset(JsonOffsetMapper.toJson(checkpointedOffset))
+
+      // just to set the current offset as the last one, i.e. the one coming from the checkpoint location
+      val batch = source.getBatch(None, deserializedOffset)
+
+      // since no new data is available, the current offset should be set to the previous one, from checkpoint
+      val expectedResolvedOffset = JDBCSingleFieldOffset(OffsetField(offsetField,
+        OffsetRange(Some(lastStartOffset), Some(lastEndOffset))))
+
+      assert(source.getLastOffset.get == expectedResolvedOffset)
+      assert(batch.isEmpty)
     }
   }
 }
