@@ -36,7 +36,11 @@ import org.apache.spark.sql.execution.streaming.sources.query.BatchQueryMaker.Of
   * @param startInclusion [[InclusionType]] telling if the start offset should be compared using '>' (exclusive = true)
   *                       or '>=' (exclusive = false)
   */
-private case class BatchRange(start: String, end: String, startInclusion: InclusionType)
+private case class BatchRange(start: String, end: String, startInclusion: InclusionType) {
+  override def toString: String = {
+    s"[Start offset = '$start', end offset = '$end', start inclusion = '$startInclusion']"
+  }
+}
 
 object JDBCStreamingSourceV1 {
   val CONFIG_OFFSET_FIELD = "offset.field"
@@ -144,14 +148,19 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
       logInfo(msg = "No offset present, calculating it from the data.")
       // the resolved offset will be stored into 'currentOffset'
       resolveFirstOffset()
+      logInfo(msg = s"Offsets retrieved from data: $currentOffset")
       currentOffset
     } else {
       nextEndOffset() match {
           // if the an offset was found and it changed, update the current one and return it, otherwise return empty
         case Some(candidateNewEndOffset) if isDifferentFromPreviousEndOffset(candidateNewEndOffset) =>
           updateCurrentOffsets(newEndOffset = candidateNewEndOffset)
+          logInfo(msg = s"Next offset found: $currentOffset")
           currentOffset
-        case _ => None
+        case _ => {
+          logDebug(msg = s"No new offset found. Previous offset: $currentOffset")
+          None
+        }
       }
     }
   }
@@ -333,12 +342,12 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
   override def getBatch(start: Option[Offset], end: Offset): DataFrame = {
 
     val batchRange = if (isFromCheckpoint(end)) {
-      logInfo(msg = "Invoked with checkpointed offset. Restoring state and retrieving next end offset")
 
       updateCurrentOffsetFromCheckpoint(end)
 
-      logInfo(msg = s"Offsets restored to '$currentOffset'")
+      logInfo(msg = s"Invoked with offset from checkpoint, will search for new offset. Previous offsets were restored to '$currentOffset'")
 
+      logInfo(msg = "")
       // this call will update the 'currentOffset' if a new end offset is found, otherwise it will still be the one
       // from the last successful batch
       getOffset match {
@@ -449,6 +458,8 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
     * Retrieves a batch of data from the informed offsets.
     */
   private def getBatchData(range: BatchRange): DataFrame = {
+
+    logInfo(s"Retrieving batch data from range: $range")
 
     val query = batchQueryMaker.make(range.start, range.end, range.startInclusion)
 
