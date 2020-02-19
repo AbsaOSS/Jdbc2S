@@ -36,7 +36,7 @@ private[sources] class OffsetQueryMaker(table: String, fieldName: String, dataTy
   import org.apache.spark.sql.execution.streaming.sources.types.OffsetTypes._
 
   if (dataType == DATE && format.isEmpty) {
-    throw new IllegalArgumentException(s"Data type is $DATE for no format was specified.")
+    throw new IllegalArgumentException(s"Data type is $DATE but no format was specified.")
   }
 
   /**
