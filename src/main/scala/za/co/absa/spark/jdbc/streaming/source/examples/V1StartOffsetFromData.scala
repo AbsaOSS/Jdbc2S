@@ -95,11 +95,11 @@ object V1StartOffsetFromData {
 
   private def readAndShowTransactions(format: String, offsetField: String, triggerMs: Long, timeoutMs: Long): Unit = {
 
-    import org.apache.spark.sql.execution.streaming.sources.JDBCStreamingSourceV1.CONFIG_OFFSET_FIELD
+    import org.apache.spark.sql.execution.streaming.sources.JDBCStreamingSourceV1._
 
     val stream = spark.readStream
       .format(format)
-      .options(jdbcOptions + (CONFIG_OFFSET_FIELD -> offsetField))
+      .options(jdbcOptions + (CONFIG_OFFSET_FIELD -> offsetField) + (CONFIG_OFFSET_FIELD_DATE_FORMAT -> "YYYY-MM-DD"))
       .load
 
     val query = stream

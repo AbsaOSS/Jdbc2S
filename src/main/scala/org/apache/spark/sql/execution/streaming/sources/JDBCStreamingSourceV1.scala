@@ -341,31 +341,25 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
     */
   override def getBatch(start: Option[Offset], end: Offset): DataFrame = {
 
-    val batchRange = if (isFromCheckpoint(end)) {
+    if (isFromCheckpoint(end)) {
+      logInfo(msg = "Invoked with checkpointed offset. Restoring state and returning empty as this offset " +
+        "was processed by the last batch")
 
       updateCurrentOffsetFromCheckpoint(end)
 
-      logInfo(msg = s"Invoked with offset from checkpoint: '$currentOffset'")
+      logInfo(msg = s"Offsets restored to '$currentOffset'")
 
-      logInfo(msg = s"Looking for offsets greater than: '${currentOffset.get.fieldsOffsets.range.end.get}'")
-
-      // this call will update the 'currentOffset' if a new end offset is found, otherwise it will still be the one
-      // from the last successful batch
-      getOffset match {
-        case Some(newEndOffset) => resolveBatchRange(start = Some(end), end = newEndOffset)
-        case None => resolveBatchRange(start = Some(end), end = end) // will result in an empty result
-      }
+      getEmptyDataFrame
     }
     else {
-      resolveBatchRange(start, end)
-    }
+      val batchRange = resolveBatchRange(start, end)
+      val batchData = getBatchData(batchRange)
 
-    val batchData = getBatchData(batchRange)
-
-    if (streamingEnabled) {
-      toStreamingDataFrame(batchData)
-    } else {
-      batchData
+      if (streamingEnabled) {
+        toStreamingDataFrame(batchData)
+      } else {
+        batchData
+      }
     }
   }
 
@@ -375,6 +369,19 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
     */
   private def isFromCheckpoint(offset: Offset): Boolean = {
     offset.isInstanceOf[SerializedOffset]
+  }
+
+  /**
+    * Creates an empty DataFrame with schema as in [[schema]].
+    */
+  private def getEmptyDataFrame: DataFrame = {
+    val emptyRDD = sqlContext.sparkContext.emptyRDD[InternalRow]
+
+    sqlContext.internalCreateDataFrame(
+      emptyRDD,
+      schema,
+      isStreaming = streamingEnabled
+    )
   }
 
   /**
