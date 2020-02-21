@@ -89,7 +89,7 @@ restart time, there would be duplicates. Also, it uses its own offset definition
 
 So, the way to connect all these pieces is to proceed like this: if the end offset provided to [getBatch](https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/execution/streaming/Source.scala#L61)
 is of type `SerializedOffset` and there is no previous offset memoized, the incoming offset is understood as coming
-from the checkpoint location. In this case, a new end offset is searched for. If it is found, the previous `end` offset will become the new `start`.
+from the checkpoint location. In this case, the checkpoint offset is memoized and an empty DataFrame is returned.
 
 In the next iteration, when calling the same method, the start offset will be the `SerializedOffset` instance previously used,
 but it will have been processed already in the last batch, so in this case, the algorithm proceeds normally.
