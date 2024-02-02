@@ -20,7 +20,6 @@ import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 import org.apache.spark.sql.execution.streaming.Source
 import org.apache.spark.sql.execution.streaming.sources.JDBCStreamingSourceV1
-import org.apache.spark.sql.sources.v2.DataSourceV2
 import org.apache.spark.sql.sources.{DataSourceRegister, StreamSourceProvider}
 import org.apache.spark.sql.types.StructType
 
@@ -30,7 +29,7 @@ import org.apache.spark.sql.types.StructType
   * Although [[JDBCStreamingSourceV1]] implements Spark DataSourceV1, this provider is marked as DataSourceV2 for
   * forward compatibility.
   */
-class JDBCStreamingSourceProviderV1 extends StreamSourceProvider with DataSourceV2 with DataSourceRegister {
+class JDBCStreamingSourceProviderV1 extends StreamSourceProvider with DataSourceRegister {
 
   private lazy val batchJDBCDataFrame = (sqlContext: SQLContext, parameters: Map[String, String]) => {
     sqlContext

@@ -22,7 +22,7 @@ import org.apache.spark.sql.execution.streaming.sources.types.OffsetSupportedTyp
   *
   * This class was created because the query will be different depending on the data type.
   *
-  * For instance, dates should be converted by invoking 'to_date' from Spark SQL functions where numbers don't need
+  * For instance, dates should be converted by invoking 'CAST(${my_date} AS DATE)' from Spark SQL functions where numbers don't need
   * any special treatment.
   *
   * @param table     String containing the name of the table to be queried.
@@ -59,7 +59,7 @@ private[sources] class OffsetQueryMaker(table: String, fieldName: String, dataTy
     }
 
     dataType match {
-      case DATE => s"$fieldName $operation to_date('$filterValue', '${format.get}')"
+      case DATE => s"$fieldName $operation CAST('$filterValue' AS DATE)"
       case STRING => s"$fieldName $operation '$filterValue'"
       case NUMBER => s"$fieldName $operation $filterValue"
     }

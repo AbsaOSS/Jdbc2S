@@ -69,7 +69,7 @@ class TestIntegrationJDBCStreamingSourceV1 extends FunSuite with SparkTestBase {
     val tableName = randomTableName
     val offsetField = "d"
     val params = Map(CONFIG_OFFSET_FIELD -> offsetField,
-      CONFIG_OFFSET_FIELD_DATE_FORMAT -> "YYYY-MM-DD") ++ jdbcDefaultConnectionParams(tableName)
+      CONFIG_OFFSET_FIELD_DATE_FORMAT -> "yyyy-MM-dd") ++ jdbcDefaultConnectionParams(tableName)
 
     val expected = randomTestData(startDate = "2020-01-01", endDate = "2020-01-05")
     writeToJDBC[TestClass](spark, params, expected)

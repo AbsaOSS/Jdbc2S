@@ -15,7 +15,7 @@
 
 package za.co.absa.spark.jdbc.streaming.source.offsets
 
-import org.apache.spark.sql.sources.v2.reader.streaming.Offset
+import org.apache.spark.sql.execution.streaming.Offset
 
 case class OffsetRange(start: Option[String], end: Option[String]) {
 

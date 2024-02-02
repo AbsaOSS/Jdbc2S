@@ -41,8 +41,8 @@ class TestBatchQueryMaker extends FunSuite {
     val condition = dataType match {
       case NUMBER => s"$offsetField $operation $start AND $offsetField <= $end"
       case STRING => s"$offsetField $operation '$start' AND $offsetField <= '$end'"
-      case DATE => s"$offsetField $operation to_date('$start','${format.get}') AND " +
-        s"$offsetField <= to_date('$end','${format.get}')"
+      case DATE => s"$offsetField $operation CAST('$start' AS DATE) AND " +
+        s"$offsetField <= CAST('$end' AS DATE)"
     }
 
     baseQuery + condition

@@ -60,7 +60,7 @@ class TestOffsetQueryMaker extends FunSpec {
       val format = "YYYY-MM-DD"
       val from = "2020-01-01"
 
-      val expected = s"SELECT MAX($fieldName) AS END_OFFSET FROM $tableName WHERE $fieldName >= to_date('$from', '$format')"
+      val expected = s"SELECT MAX($fieldName) AS END_OFFSET FROM $tableName WHERE $fieldName >= CAST('$from' AS DATE)"
 
       val actual = new OffsetQueryMaker(tableName, fieldName, DATE, Some(format)).make(END_OFFSET, Some(from))
 
@@ -127,11 +127,11 @@ class TestOffsetQueryMaker extends FunSpec {
       val format = "YYYY-MM-DD"
       val from = "2020-01-01"
 
-      val expected = s"SELECT MIN($fieldName) AS START_OFFSET FROM $tableName WHERE $fieldName <= to_date('$from', '$format')"
+      val expected = s"SELECT MIN($fieldName) AS START_OFFSET FROM $tableName WHERE $fieldName <= CAST('$from' AS DATE)"
 
       val actual = new OffsetQueryMaker(tableName, fieldName, DATE, Some(format)).make(START_OFFSET, Some(from))
 
-      assert(expected == actual)
+      assert(actual == expected)
     }
 
     it("should just query max STRING field if no 'from' is specified") {
