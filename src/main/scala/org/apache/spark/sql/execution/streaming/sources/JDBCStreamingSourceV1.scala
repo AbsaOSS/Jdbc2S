@@ -477,6 +477,7 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
       .options(parameters)
       .option(JDBCOptions.JDBC_TABLE_NAME, s"($query)")
       .load()
+      .alias(JDBCOptions.JDBC_TABLE_NAME.take(2))
   }
 
   /**
