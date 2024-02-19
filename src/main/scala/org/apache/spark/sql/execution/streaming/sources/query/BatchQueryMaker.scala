@@ -51,7 +51,7 @@ private[sources] class BatchQueryMaker(tableName: String, offsetField: String, o
     val operator = getOperator(offsetType, offsetOperationType)
 
     offsetFieldType match {
-      case DATE => s"$offsetField $operator to_date('$filterValue','${offsetFieldDateFormat.get}')"
+      case DATE => s"$offsetField $operator CAST('$filterValue' AS DATE)"
       case STRING => s"$offsetField $operator '$filterValue'"
       case NUMBER => s"$offsetField $operator $filterValue"
     }

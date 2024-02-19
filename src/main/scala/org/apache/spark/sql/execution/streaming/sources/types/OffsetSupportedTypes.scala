@@ -15,12 +15,13 @@
 
 package org.apache.spark.sql.execution.streaming.sources.types
 
-import org.apache.spark.sql.types.{DataType, DateType, StructField, StructType}
+import org.apache.spark.internal.Logging
+import org.apache.spark.sql.types.{DataType, DateType, StructField, StructType, TimestampType}
 
 /**
   * Currently data types can only be dates, strings and numbers
   */
-object OffsetSupportedTypes extends Enumeration {
+object OffsetSupportedTypes extends Enumeration with Logging {
   type OffsetDataType = Value
   val DATE, STRING, NUMBER = Value
 
@@ -49,8 +50,9 @@ object OffsetSupportedTypes extends Enumeration {
     * This piggies-back on the inference available at [[org.apache.spark.sql.execution.datasources.jdbc.JdbcRelationProvider.createRelation()]]
     */
   private def getSupportedType(field: StructField): OffsetDataType = {
+    logDebug(s"Data type: $field")
     field.dataType match {
-      case _: DateType => DATE
+      case _: DateType | TimestampType => DATE
       case t: DataType if t.typeName.toLowerCase.contains("string") => STRING
       case _ => NUMBER
     }

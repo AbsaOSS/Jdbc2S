@@ -260,6 +260,8 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
   private def findOffset(offsetType: OffsetType, filter: Option[String]): Option[String] = {
     val offsetRetrievalQuery = offsetQueryMaker.make(offsetType, filter)
 
+    logDebug(s"offsetRetrievalQuery: $offsetRetrievalQuery")
+
     val offsetValue = getFirstColValAsString(offsetRetrievalQuery)
     logInfo(msg = s"Inferred from data as '$offsetType': $offsetValue")
     offsetValue
@@ -275,7 +277,7 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
         .read
         .format(source = "jdbc")
         .options(parameters)
-        .option(JDBCOptions.JDBC_TABLE_NAME, s"($query)")
+        .option(JDBCOptions.JDBC_TABLE_NAME, s"($query) AS O1")
         .load()
         .first()
 
@@ -475,8 +477,9 @@ class JDBCStreamingSourceV1(sqlContext: SQLContext,
       .read
       .format(source = "jdbc")
       .options(parameters)
-      .option(JDBCOptions.JDBC_TABLE_NAME, s"($query)")
+      .option(JDBCOptions.JDBC_TABLE_NAME, s"($query) AS B1")
       .load()
+      .alias(JDBCOptions.JDBC_TABLE_NAME.take(2))
   }
 
   /**
