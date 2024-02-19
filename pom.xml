@@ -63,7 +63,7 @@ limitations under the License.
         <specs.version>4.7.1</specs.version>
 
         <!--Spark-->
-        <spark.version>3.2.4</spark.version>
+        <spark.version>3.3.3</spark.version>
 
         <!--Play-->
         <play.json.version>2.7.4</play.json.version>
